@@ -5,22 +5,27 @@ import (
 	"log"
 	"net/http"
 	"time"
-	"github.com/johnson-oragui/golang-todo-api/routeHandler"
+
+	"github.com/gorilla/mux"
+	"github.com/johnson-oragui/golang-todo-api/baseRouteHandler"
+	"github.com/johnson-oragui/golang-todo-api/usersRouteHandler"
 	"github.com/johnson-oragui/golang-todo-api/utils"
 )
 
 // myHandler sets the server routes
 func myHandler() http.Handler {
-	router := http.NewServeMux()
-	
-	routeHandler := routeHandler.New()
+	router := mux.NewRouter()
+
+	baseRouteHandler := baseRouteHandler.New()   // Base Handler
+	usersRouteHandler := usersRouteHandler.New() // Users Resource Handler
 
 	// Define handlers
-	router.HandleFunc("/", routeHandler.HomeHandler) // root handler
-	router.HandleFunc("/api/v1/auth/register", routeHandler.HandleUsers)
+	router.HandleFunc("/", baseRouteHandler.HomeHandler).Methods("GET")                          // root handler
+	router.HandleFunc("/api/v1/about", baseRouteHandler.HandleAboutPage).Methods("GET")          // About page handler
+	router.HandleFunc("/api/v1/auth/register", usersRouteHandler.HandleRegister).Methods("POST") // POST
+	router.HandleFunc("/api/v1/users/{username}", usersRouteHandler.HandleUsers)                 // GET, PUT, DELETE
 	return utils.LogginMiddleware(router)
 }
-
 
 func main() {
 	server := &http.Server{
