@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/johnson-oragui/golang-todo-api/baseRouteHandler"
+	"github.com/johnson-oragui/golang-todo-api/todosRouteHandler"
 	"github.com/johnson-oragui/golang-todo-api/usersRouteHandler"
 	"github.com/johnson-oragui/golang-todo-api/utils"
 )
@@ -18,12 +19,14 @@ func myHandler() http.Handler {
 
 	baseRouteHandler := baseRouteHandler.New()   // Base Handler
 	usersRouteHandler := usersRouteHandler.New() // Users Resource Handler
+	todosRouteHandler := todosRouteHandler.New()
 
 	// Define handlers
 	router.HandleFunc("/", baseRouteHandler.HomeHandler).Methods("GET")                          // root handler
 	router.HandleFunc("/api/v1/about", baseRouteHandler.HandleAboutPage).Methods("GET")          // About page handler
 	router.HandleFunc("/api/v1/auth/register", usersRouteHandler.HandleRegister).Methods("POST") // POST
 	router.HandleFunc("/api/v1/users/{username}", usersRouteHandler.HandleUsers)                 // GET, PUT, DELETE
+	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleTodos)           // GET, PUT, DELETE
 	return utils.LogginMiddleware(router)
 }
 
