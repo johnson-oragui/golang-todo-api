@@ -27,6 +27,14 @@ type UserSchemaOutput struct {
 	Data     UserBase `json:"data"`
 }
 
+type UsersDataBase struct {
+	Users map[string]UserBase
+}
+
+type TodoDataBase struct {
+	User map[string]Todos
+}
+
 type TodoSchema struct {
 	Todo   string `json:"todo"`
 	Status string `json:"status"`
@@ -34,14 +42,18 @@ type TodoSchema struct {
 
 type TodoResponse struct {
 	Response Response
-	Data     TodoSchema `json:"data"`
+	Data     any `json:"data"`
+}
+type Todos struct {
+	AllTodos []TodoSchema
 }
 
-type UsersDataBase struct {
-	Users map[string]UserBase
+// Simulated global database
+var Database UsersDataBase = UsersDataBase{
+	Users: map[string]UserBase{},
 }
 
-type TodoDataBase struct {
-	Username string
-	Todos    map[string]TodoSchema
+// Simulated global database
+var TodosDataBase TodoDataBase = TodoDataBase{
+	User: map[string]Todos{},
 }
