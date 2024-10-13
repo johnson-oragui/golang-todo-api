@@ -2,17 +2,13 @@ package usersRouteHandler
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/johnson-oragui/golang-todo-api/schema"
 )
-
-// Simulated global database
-var Database schema.UsersDataBase = schema.UsersDataBase{
-	Users: map[string]schema.UserBase{},
-}
 
 // Structure for route handlers
 type RouteHandler struct{}
@@ -33,6 +29,7 @@ func (r *RouteHandler) HandleUsers(w http.ResponseWriter, req *http.Request) {
 		r.HandleDeleteUser(w, req)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
+		http.Error(w, "Method not Allowed", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -64,7 +61,7 @@ func (s *RouteHandler) HandleRegister(w http.ResponseWriter, req *http.Request) 
 
 	// save user to database
 	newUser.ID = 1
-	Database.Users[newUser.Username] = newUser
+	schema.Database.Users[newUser.Username] = newUser
 
 	// Construct response data
 	data := schema.UserBase{
@@ -101,7 +98,7 @@ func (s *RouteHandler) HandleGetUser(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, "username is missing in the query params", http.StatusBadRequest)
 	}
 
-	user, exists := Database.Users[username]
+	user, exists := schema.Database.Users[username]
 
 	if !exists {
 		log.Printf("username %s does not exists in the database", username)
@@ -149,7 +146,7 @@ func (r *RouteHandler) HandleUpdateuser(w http.ResponseWriter, req *http.Request
 	defer req.Body.Close()
 
 	// retrieve the user from database using the username
-	user, exists := Database.Users[username]
+	user, exists := schema.Database.Users[username]
 
 	if !exists {
 		http.Error(w, "User not Found", http.StatusNotFound)
@@ -174,7 +171,7 @@ func (r *RouteHandler) HandleUpdateuser(w http.ResponseWriter, req *http.Request
 	}
 
 	// save the updated user to database
-	Database.Users[user.Username] = user
+	schema.Database.Users[user.Username] = user
 
 	// Construct the response data
 	data := schema.UserBase{
@@ -204,5 +201,27 @@ func (r *RouteHandler) HandleUpdateuser(w http.ResponseWriter, req *http.Request
 
 // delete user handler DELETE /users
 func (r *RouteHandler) HandleDeleteUser(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
 
+	username := vars["username"]
+
+	if _, exists := schema.Database.Users[username]; !exists {
+		log.Printf("username %v does not exist", username)
+		message := fmt.Sprintf("User %v does not exist", username)
+		http.Error(w, message, http.StatusBadRequest)
+		return
+	}
+
+	delete(schema.Database.Users, username)
+
+	response := schema.Response{
+		Message:    "User deleted successfully",
+		StatusCode: 200,
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		log.Printf("An error occured: %v", err)
+		http.Error(w, "Could not ENcode Json response", http.StatusInternalServerError)
+	}
 }
