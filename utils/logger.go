@@ -12,7 +12,6 @@ import (
 func LogginMiddleware(next http.Handler) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Add("Content-Type", "applicaton/json")
 		logger := make(map[string]string)
 		header := make(map[string]any)
 
