@@ -38,7 +38,7 @@ func (s *BaseRouter) HomeHandler(w http.ResponseWriter, req *http.Request) {
 		http.NotFound(w, req)
 		return
 	}
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		http.Error(w, "Unable to encode JSON", http.StatusInternalServerError)
@@ -52,6 +52,7 @@ func (b *BaseRouter) HandleAboutPage(w http.ResponseWriter, req *http.Request) {
 		Message:    "This is the about page for the golang todo API",
 	}
 
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Println("Error encoding data for about page")
