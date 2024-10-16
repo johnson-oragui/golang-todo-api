@@ -4,10 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/johnson-oragui/golang-todo-api/schema"
+	"github.com/johnson-oragui/golang-todo-api/utils"
 )
 
 // Structure for route handlers
@@ -35,7 +37,7 @@ func (r *RouteHandler) HandleUsers(w http.ResponseWriter, req *http.Request) {
 
 // create user handler POST /users
 func (s *RouteHandler) HandleRegister(w http.ResponseWriter, req *http.Request) {
-	var newUser schema.UserBase
+	var newUser schema.UserSchemaInput
 	if req.Method != http.MethodPost {
 		log.Println("Method Not allowed in register route")
 		http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
@@ -57,11 +59,20 @@ func (s *RouteHandler) HandleRegister(w http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	defer req.Body.Close()
+	if err := newUser.ValidateUserBase(); err != nil {
+		log.Println(err)
+		http.Error(w, fmt.Sprintln(err), http.StatusBadRequest)
+		return
+	}
 
-	// save user to database
-	newUser.ID = 1
-	schema.Database.Users[newUser.Username] = newUser
+	defer req.Body.Close()
+	// check if user already exists
+	userExists, exists := schema.Database.Users[newUser.Username]
+	if exists {
+		log.Println("User already exists, user:", userExists)
+		http.Error(w, "User already exists", http.StatusForbidden)
+		return
+	}
 
 	// Construct response data
 	data := schema.UserBase{
@@ -69,17 +80,19 @@ func (s *RouteHandler) HandleRegister(w http.ResponseWriter, req *http.Request) 
 		Email:     newUser.Email,
 		FirstName: newUser.FirstName,
 		LastName:  newUser.LastName,
-		ID:        1,
+		ID:        rand.Intn(10000),
 	}
+
+	// save user to database
+	schema.Database.Users[newUser.Username] = data
 
 	res := schema.UserSchemaOutput{
-		Response: schema.Response{
-			Message:    "Retrieved successfully",
-			StatusCode: 200,
-		},
-		Data: data,
+		Message:    "User Registered successfully",
+		StatusCode: 200,
+		Data:       data,
 	}
 
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(http.StatusOK)
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
@@ -96,6 +109,7 @@ func (s *RouteHandler) HandleGetUser(w http.ResponseWriter, req *http.Request) {
 	if username == "" {
 		log.Println("username is missing")
 		http.Error(w, "username is missing in the query params", http.StatusBadRequest)
+		return
 	}
 
 	user, exists := schema.Database.Users[username]
@@ -107,13 +121,12 @@ func (s *RouteHandler) HandleGetUser(w http.ResponseWriter, req *http.Request) {
 	}
 
 	res := schema.UserSchemaOutput{
-		Response: schema.Response{
-			Message:    "User retrived successfully",
-			StatusCode: 200,
-		},
-		Data: user,
+		Message:    "Retrieved successfully",
+		StatusCode: 200,
+		Data:       user,
 	}
 
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		http.Error(w, "Error ENcoding JSON", http.StatusInternalServerError)
@@ -152,43 +165,51 @@ func (r *RouteHandler) HandleUpdateuser(w http.ResponseWriter, req *http.Request
 		http.Error(w, "User not Found", http.StatusNotFound)
 		return
 	}
+	notAllowedChars := "1234567890!@#$%^&*()_| \\/+?><'\""
 
 	// update the user
 	if updateUser.Email != "" {
 		user.Email = updateUser.Email
 	}
-	if updateUser.Username != "" {
-		user.Username = updateUser.Username
-	}
+
 	if updateUser.FirstName != "" {
+		if err := utils.ContainsAny(updateUser.FirstName, notAllowedChars); err {
+			log.Printf("firstname must not contain %v", notAllowedChars)
+			message := fmt.Sprintf("firstname must not contain %v", notAllowedChars)
+			http.Error(w, message, http.StatusNotFound)
+			return
+		}
 		user.FirstName = updateUser.FirstName
 	}
 	if updateUser.LastName != "" {
+		if err := utils.ContainsAny(updateUser.Username, notAllowedChars); err {
+			log.Printf("lastname must not contain %v", notAllowedChars)
+			message := fmt.Sprintf("lastname must not contain %v", notAllowedChars)
+			http.Error(w, message, http.StatusNotFound)
+			return
+		}
 		user.LastName = updateUser.LastName
 	}
 	if updateUser.Password != "" {
+		if err := utils.ValidatePassword(updateUser.Password); err != nil {
+			log.Printf("error: %v", err)
+			http.Error(w, fmt.Sprint(err), http.StatusNotFound)
+			return
+		}
 		user.Password = updateUser.Password
 	}
 
-	// save the updated user to database
+	delete(schema.Database.Users, username)
+
 	schema.Database.Users[user.Username] = user
 
-	// Construct the response data
-	data := schema.UserBase{
-		Email:     user.Email,
-		Username:  user.Username,
-		FirstName: user.FirstName,
-		LastName:  user.LastName,
-		ID:        user.ID,
-	}
 	response := schema.UserSchemaOutput{
-		Response: schema.Response{
-			StatusCode: 200,
-			Message:    "Updated successfully",
-		},
-		Data: data,
+		Message:    "Updated successfully",
+		StatusCode: 200,
+		Data:       schema.Database.Users[user.Username],
 	}
 
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(201)
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
@@ -219,6 +240,7 @@ func (r *RouteHandler) HandleDeleteUser(w http.ResponseWriter, req *http.Request
 		StatusCode: 200,
 	}
 
+	w.Header().Add("Content-Type", "applicaton/json")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("An error occured: %v", err)
