@@ -19,14 +19,16 @@ func myHandler() http.Handler {
 
 	baseRouteHandler := baseRouteHandler.New()   // Base Handler
 	usersRouteHandler := usersRouteHandler.New() // Users Resource Handler
-	todosRouteHandler := todosRouteHandler.New()
+	todosRouteHandler := todosRouteHandler.New() // Todos Resource Handler
 
 	// Define handlers
-	router.HandleFunc("/", baseRouteHandler.HomeHandler).Methods("GET")                          // root handler
-	router.HandleFunc("/api/v1/about", baseRouteHandler.HandleAboutPage).Methods("GET")          // About page handler
-	router.HandleFunc("/api/v1/auth/register", usersRouteHandler.HandleRegister).Methods("POST") // POST
-	router.HandleFunc("/api/v1/users/{username}", usersRouteHandler.HandleUsers)                 // GET, PUT, DELETE
-	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleTodos)           // GET, PUT, DELETE
+	router.HandleFunc("/", baseRouteHandler.HomeHandler).Methods("GET")                                     // root handler
+	router.HandleFunc("/api/v1/about", baseRouteHandler.HandleAboutPage).Methods("GET")                     // About page handler
+	router.HandleFunc("/api/v1/auth/register", usersRouteHandler.HandleRegister).Methods("POST")            // POST
+	router.HandleFunc("/api/v1/users/{username}", usersRouteHandler.HandleUsers)                            // GET, PUT, DELETE
+	router.HandleFunc("/api/v1/users/{username}/todos/{todo_id}", todosRouteHandler.HandleTodos)            // GET, PUT, DELETE
+	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleGetTodos).Methods("GET")    // GET
+	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleCreateTodo).Methods("POST") // POST
 	return utils.LogginMiddleware(router)
 }
 
