@@ -7,29 +7,28 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/johnson-oragui/golang-todo-api/baseRouteHandler"
-	"github.com/johnson-oragui/golang-todo-api/todosRouteHandler"
-	"github.com/johnson-oragui/golang-todo-api/usersRouteHandler"
-	"github.com/johnson-oragui/golang-todo-api/utils"
+	"github.com/johnson-oragui/golang-todo-api/middleware"
+	"github.com/johnson-oragui/golang-todo-api/routes"
 )
 
 // myHandler sets the server routes
 func myHandler() http.Handler {
 	router := mux.NewRouter()
 
-	baseRouteHandler := baseRouteHandler.New()   // Base Handler
-	usersRouteHandler := usersRouteHandler.New() // Users Resource Handler
-	todosRouteHandler := todosRouteHandler.New() // Todos Resource Handler
+	baseRouter := routes.NewBaseRouter() // Base Handler
+	userRouter := routes.NewUserRouter() // Users Handler
+	todoRouter := routes.NewTodoRouter() // Todos Handler
 
 	// Define handlers
-	router.HandleFunc("/", baseRouteHandler.HomeHandler).Methods("GET")                                     // root handler
-	router.HandleFunc("/api/v1/about", baseRouteHandler.HandleAboutPage).Methods("GET")                     // About page handler
-	router.HandleFunc("/api/v1/auth/register", usersRouteHandler.HandleRegister).Methods("POST")            // POST
-	router.HandleFunc("/api/v1/users/{username}", usersRouteHandler.HandleUsers)                            // GET, PUT, DELETE
-	router.HandleFunc("/api/v1/users/{username}/todos/{todo_id}", todosRouteHandler.HandleTodos)            // GET, PUT, DELETE
-	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleGetTodos).Methods("GET")    // GET
-	router.HandleFunc("/api/v1/users/{username}/todos", todosRouteHandler.HandleCreateTodo).Methods("POST") // POST
-	return utils.LogginMiddleware(router)
+	router.HandleFunc("/", baseRouter.HomeHandler).Methods("GET")                                                                     // root handler
+	router.HandleFunc("/api/v1/about", baseRouter.HandleAboutPage).Methods("GET")                                                     // About page handler
+	router.HandleFunc("/api/v1/auth/register", userRouter.HandleRegister)                                                             // POST
+	router.HandleFunc("/api/v1/auth/login", userRouter.HandleLogin).Methods("POST")                                                   // POST
+	router.Handle("/api/v1/users", middleware.JWTAuthMiddleware(http.HandlerFunc(userRouter.HandleUsers)))                            // GET, PUT, DELETE
+	router.Handle("/api/v1/users/todos/{todo_id}", middleware.JWTAuthMiddleware(http.HandlerFunc(todoRouter.HandleTodos)))            // GET, PUT, DELETE
+	router.Handle("/api/v1/users/todos", middleware.JWTAuthMiddleware(http.HandlerFunc(todoRouter.HandleGetTodos))).Methods("GET")    // GET
+	router.Handle("/api/v1/users/todos", middleware.JWTAuthMiddleware(http.HandlerFunc(todoRouter.HandleCreateTodo))).Methods("POST") // POST
+	return middleware.LogginMiddleware(router)
 }
 
 func main() {
