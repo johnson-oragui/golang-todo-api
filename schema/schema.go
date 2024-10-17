@@ -8,6 +8,10 @@ import (
 	"github.com/johnson-oragui/golang-todo-api/utils"
 )
 
+type LoginSchema struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
 type Response struct {
 	Message    string `json:"message"`
 	StatusCode int    `json:"status_code"`
