@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/http"
 
 	"github.com/johnson-oragui/golang-todo-api/auth"
@@ -78,6 +77,7 @@ func (s *UserRouter) HandleRegister(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		log.Println("error hashing password")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
 	}
 
 	// Construct response data
@@ -86,7 +86,7 @@ func (s *UserRouter) HandleRegister(w http.ResponseWriter, req *http.Request) {
 		Email:     newUser.Email,
 		FirstName: newUser.FirstName,
 		LastName:  newUser.LastName,
-		ID:        rand.Intn(10000),
+		ID:        len(schema.Database.Users) + 1,
 		Password:  hashedPassword,
 	}
 
@@ -95,16 +95,15 @@ func (s *UserRouter) HandleRegister(w http.ResponseWriter, req *http.Request) {
 
 	res := schema.UserSchemaOutput{
 		Message:    "User Registered successfully",
-		StatusCode: 200,
+		StatusCode: 201,
 		Data:       data,
 	}
 
-	w.Header().Add("Content-Type", "applicaton/json")
-	w.WriteHeader(http.StatusOK)
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		http.Error(w, "Could not encode JSON", http.StatusInternalServerError)
-		return
 	}
 }
 
@@ -168,7 +167,7 @@ func (s *UserRouter) HandleLogin(w http.ResponseWriter, req *http.Request) {
 		},
 	}
 	w.Header().Add("Content-Type", "application/json")
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("Error encoding JSON")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
@@ -181,7 +180,7 @@ func (s *UserRouter) HandleGetUser(w http.ResponseWriter, req *http.Request) {
 	username, ok := req.Context().Value("username").(string)
 	if !ok {
 		log.Println("User not authenticated")
-		http.Error(w, "User not authenticated", http.StatusBadRequest)
+		http.Error(w, "User not authenticated", http.StatusUnauthorized)
 		return
 	}
 
@@ -321,7 +320,7 @@ func (r *UserRouter) HandleDeleteUser(w http.ResponseWriter, req *http.Request) 
 	}
 
 	w.Header().Add("Content-Type", "applicaton/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusAccepted)
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Printf("An error occured: %v", err)
 		http.Error(w, "Could not ENcode Json response", http.StatusInternalServerError)

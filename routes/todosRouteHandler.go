@@ -3,7 +3,6 @@ package routes
 import (
 	"encoding/json"
 	"log"
-	"math/rand"
 	"net/http"
 	"strconv"
 
@@ -66,9 +65,7 @@ func (r *TodoRouter) HandleCreateTodo(w http.ResponseWriter, req *http.Request) 
 	}
 
 	// create a nil TodoSchema struct
-	todoInput := schema.TodoSchema{
-		ID: rand.Intn(10000),
-	}
+	todoInput := schema.TodoSchema{}
 
 	// save the request body to the nill struct
 	if err := json.NewDecoder(req.Body).Decode(&todoInput); err != nil {
@@ -86,6 +83,7 @@ func (r *TodoRouter) HandleCreateTodo(w http.ResponseWriter, req *http.Request) 
 		// create an empty entry if user has no todo entry
 		userTodos = schema.Todos{}
 	}
+	todoInput.ID = len(userTodos.AllTodos) + 1
 
 	// add the payload to the list of user todos
 	userTodos.AllTodos = append(userTodos.AllTodos, todoInput)
@@ -215,7 +213,7 @@ func (r *TodoRouter) HandleGetTodo(w http.ResponseWriter, req *http.Request) {
 
 	if thatTodo.ID == 0 && thatTodo.Todo == "" && !thatTodo.Completed {
 		log.Println("todo not found")
-		http.Error(w, "todo not found", http.StatusInternalServerError)
+		http.Error(w, "todo not found", http.StatusNotFound)
 		return
 	}
 
@@ -301,14 +299,14 @@ func (r *TodoRouter) HandleUpdateTodo(w http.ResponseWriter, req *http.Request) 
 
 	response := schema.TodoResponse{
 		Response: schema.Response{
-			Message:    "Todos retrieved successfully",
-			StatusCode: 200,
+			Message:    "Todo Updated successfully",
+			StatusCode: 201,
 		},
 		Data: userTodos.AllTodos,
 	}
 
 	w.Header().Add("Content-Type", "applicaton/json")
-	w.WriteHeader(http.StatusOK)
+	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		log.Println("error encoding JSON")
